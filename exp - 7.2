@@ -1,0 +1,184 @@
+Step 1: Initialize Project
+mkdir banking-api
+cd banking-api
+npm init -y
+npm install express body-parser jsonwebtoken
+
+Step 2: Create server.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+app.use(bodyParser.json());
+
+const JWT_SECRET = 'bankingsecretkey';
+
+// Hardcoded user and account for simplicity
+let account = {
+    username: 'akash',
+    password: '12345',
+    balance: 5000
+};
+
+// -------- Login Route --------
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+
+    if (username === account.username && password === account.password) {
+        // Generate JWT token
+        const token = jwt.sign({ username: account.username }, JWT_SECRET, { expiresIn: '1h' });
+        return res.json({ token });
+    } else {
+        return res.status(401).json({ message: 'Invalid credentials' });
+    }
+});
+
+// -------- JWT Middleware --------
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ message: 'Invalid token' });
+        req.user = user;
+        next();
+    });
+}
+
+// -------- Protected Banking Routes --------
+
+// View balance
+app.get('/balance', authenticateToken, (req, res) => {
+    res.json({ balance: account.balance });
+});
+
+// Deposit money
+app.post('/deposit', authenticateToken, (req, res) => {
+    const { amount } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ message: 'Invalid deposit amount' });
+
+    account.balance += amount;
+    res.json({ message: `Deposited ₹${amount}. New balance: ₹${account.balance}` });
+});
+
+// Withdraw money
+app.post('/withdraw', authenticateToken, (req, res) => {
+    const { amount } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ message: 'Invalid withdrawal amount' });
+
+    if (amount > account.balance) {
+        return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    account.balance -= amount;
+    res.json({ message: `Withdrew ₹${amount}. New balance: ₹${account.balance}` });
+});
+
+// Start server
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Banking API running at http://localhost:${PORT}`);
+});
+
+Step 3: Test the API
+
+Login to get JWT
+
+POST http://localhost:3000/login
+Content-Type: application/json
+
+{
+  "username": "akash",
+  "password": "12345"
+}
+
+
+Response:
+
+{ "token": "<JWT_TOKEN>" }
+
+
+View balance (protected)
+
+GET /balance
+Authorization: Bearer <JWT_TOKEN>
+
+
+Response:
+
+{ "balance": 5000 }
+
+
+Deposit money
+
+POST /deposit
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "amount": 2000
+}
+
+
+Response:
+
+{ "message": "Deposited ₹2000. New balance: ₹7000" }
+
+
+Withdraw money
+
+POST /withdraw
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "amount": 3000
+}
+
+
+Response:
+
+{ "message": "Withdrew ₹3000. New balance: ₹4000" }
+
+
+Withdraw more than balance
+
+POST /withdraw
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "amount": 5000
+}
+
+
+Response:
+
+{ "message": "Insufficient balance" }
+
+
+Access protected route with invalid token
+
+GET /balance
+Authorization: Bearer wrongtoken
+
+
+Response:
+
+{ "message": "Invalid token" }
+
+
+✅ Key Features Implemented:
+
+/login issues JWT token for authentication.
+
+authenticateToken middleware protects sensitive routes.
+
+Banking operations: balance, deposit, withdraw.
+
+Handles errors: missing/invalid token, invalid amount, insufficient balance.
+
+Easy to extend with multiple users/accounts in future.
