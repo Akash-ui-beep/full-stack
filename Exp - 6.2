@@ -1,0 +1,128 @@
+Step 1: Initialize project
+mkdir jwt-protected-routes
+cd jwt-protected-routes
+npm init -y
+npm install express jsonwebtoken body-parser
+
+Step 2: Create server.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+app.use(bodyParser.json());
+
+// Secret key for JWT signing
+const JWT_SECRET = 'mysecretkey';
+
+// Hardcoded user for simplicity
+const user = {
+    id: 1,
+    username: 'akash',
+    password: '12345'
+};
+
+// Login route
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+
+    // Check credentials
+    if (username === user.username && password === user.password) {
+        // Generate JWT token
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+        return res.json({ token });
+    } else {
+        return res.status(401).json({ message: 'Invalid credentials' });
+    }
+});
+
+// Middleware to verify JWT
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+
+    if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ message: 'Invalid token' });
+        req.user = user; // Attach user info to request
+        next();
+    });
+}
+
+// Protected route
+app.get('/protected', authenticateToken, (req, res) => {
+    res.json({ message: `Hello ${req.user.username}, you have access to protected data.` });
+});
+
+// Start server
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
+
+Step 3: Test the API
+
+Login to get JWT token
+
+POST http://localhost:3000/login
+Content-Type: application/json
+
+{
+  "username": "akash",
+  "password": "12345"
+}
+
+
+Response:
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR..."
+}
+
+
+Access protected route with token
+
+GET http://localhost:3000/protected
+Authorization: Bearer <token>
+
+
+Response:
+
+{
+  "message": "Hello akash, you have access to protected data."
+}
+
+
+Access protected route without token
+
+GET http://localhost:3000/protected
+
+
+Response:
+
+{
+  "message": "Access denied. No token provided."
+}
+
+
+Access protected route with invalid token
+
+GET http://localhost:3000/protected
+Authorization: Bearer invalidtoken
+
+
+Response:
+
+{
+  "message": "Invalid token"
+}
+
+
+✅ Summary:
+
+/login issues a JWT when credentials are valid.
+
+authenticateToken middleware checks the token in the Authorization header.
+
+/protected route can only be accessed with a valid JWT.
