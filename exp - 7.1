@@ -1,0 +1,113 @@
+Step 1: Initialize Project
+mkdir express-middleware
+cd express-middleware
+npm init -y
+npm install express
+
+Step 2: Create server.js
+const express = require('express');
+const app = express();
+
+// --------- Middleware 1: Request Logging ---------
+function logRequests(req, res, next) {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.url}`);
+    next(); // pass control to next middleware/route
+}
+
+// Apply logging middleware globally
+app.use(logRequests);
+
+// --------- Middleware 2: Bearer Token Authentication ---------
+function authenticateBearerToken(req, res, next) {
+    const authHeader = req.headers['authorization']; // get Authorization header
+    if (!authHeader) {
+        return res.status(401).json({ message: 'No authorization header provided' });
+    }
+
+    // Expect format: "Bearer mysecrettoken"
+    const token = authHeader.split(' ')[1]; 
+    if (token !== 'mysecrettoken') {
+        return res.status(403).json({ message: 'Invalid or missing token' });
+    }
+
+    next(); // token is valid
+}
+
+// --------- Public Route ---------
+app.get('/public', (req, res) => {
+    res.json({ message: 'This is a public route accessible by anyone.' });
+});
+
+// --------- Protected Route ---------
+app.get('/protected', authenticateBearerToken, (req, res) => {
+    res.json({ message: 'You have accessed a protected route with a valid token!' });
+});
+
+// Start server
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
+
+Step 3: Test the Server
+
+Access public route
+
+curl http://localhost:3000/public
+
+
+Response:
+
+{ "message": "This is a public route accessible by anyone." }
+
+
+Console log:
+
+[2025-10-25T21:30:00.000Z] GET /public
+
+
+Access protected route without token
+
+curl http://localhost:3000/protected
+
+
+Response:
+
+{ "message": "No authorization header provided" }
+
+
+Console log:
+
+[2025-10-25T21:31:00.000Z] GET /protected
+
+
+Access protected route with invalid token
+
+curl -H "Authorization: Bearer wrongtoken" http://localhost:3000/protected
+
+
+Response:
+
+{ "message": "Invalid or missing token" }
+
+
+Access protected route with valid token
+
+curl -H "Authorization: Bearer mysecrettoken" http://localhost:3000/protected
+
+
+Response:
+
+{ "message": "You have accessed a protected route with a valid token!" }
+
+
+✅ Key Features Implemented:
+
+Logging Middleware: Logs HTTP method, URL, and timestamp for every request.
+
+Bearer Token Authentication: Protects routes with a simple static token (mysecrettoken).
+
+Global Middleware: Logging applies to all routes.
+
+Public vs Protected Routes: Demonstrates both accessible and restricted endpoints.
