@@ -1,0 +1,172 @@
+Step 1: Setup Project
+mkdir account-transfer
+cd account-transfer
+npm init -y
+npm install express mongoose body-parser
+
+Step 2: Create server.js
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+
+const app = express();
+app.use(bodyParser.json());
+
+// MongoDB connection
+mongoose.connect('mongodb://127.0.0.1:27017/bankDB', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
+
+// Account Schema
+const accountSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    balance: { type: Number, required: true, default: 0 }
+});
+
+const Account = mongoose.model('Account', accountSchema);
+
+// --------- Sample Accounts (Run once) ---------
+// const sampleAccounts = [
+//     { username: 'alice', balance: 5000 },
+//     { username: 'bob', balance: 3000 }
+// ];
+// Account.insertMany(sampleAccounts).then(() => console.log('Sample accounts added'));
+
+// --------- Transfer API ---------
+app.post('/transfer', async (req, res) => {
+    const { fromUser, toUser, amount } = req.body;
+
+    if (!fromUser || !toUser || !amount || amount <= 0) {
+        return res.status(400).json({ message: 'Invalid request data' });
+    }
+
+    try {
+        // Find sender and receiver accounts
+        const sender = await Account.findOne({ username: fromUser });
+        const receiver = await Account.findOne({ username: toUser });
+
+        if (!sender) return res.status(404).json({ message: `Sender account '${fromUser}' not found` });
+        if (!receiver) return res.status(404).json({ message: `Receiver account '${toUser}' not found` });
+
+        // Check sender balance
+        if (sender.balance < amount) {
+            return res.status(400).json({ message: 'Insufficient balance' });
+        }
+
+        // Sequential updates
+        sender.balance -= amount;
+        receiver.balance += amount;
+
+        await sender.save();
+        await receiver.save();
+
+        res.json({ 
+            message: `Transfer successful! ₹${amount} sent from ${fromUser} to ${toUser}`,
+            senderBalance: sender.balance,
+            receiverBalance: receiver.balance
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// --------- View Account Balance ---------
+app.get('/balance/:username', async (req, res) => {
+    try {
+        const account = await Account.findOne({ username: req.params.username });
+        if (!account) return res.status(404).json({ message: 'Account not found' });
+
+        res.json({ username: account.username, balance: account.balance });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Start server
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+Step 3: Test the API
+1. Add sample accounts
+
+Uncomment the Sample Accounts section in server.js and run once to populate the database.
+
+2. Check balances
+GET /balance/alice
+
+
+Response:
+
+{ "username": "alice", "balance": 5000 }
+
+GET /balance/bob
+
+
+Response:
+
+{ "username": "bob", "balance": 3000 }
+
+3. Successful transfer
+POST /transfer
+Content-Type: application/json
+
+{
+  "fromUser": "alice",
+  "toUser": "bob",
+  "amount": 2000
+}
+
+
+Response:
+
+{
+  "message": "Transfer successful! ₹2000 sent from alice to bob",
+  "senderBalance": 3000,
+  "receiverBalance": 5000
+}
+
+4. Transfer with insufficient balance
+POST /transfer
+Content-Type: application/json
+
+{
+  "fromUser": "alice",
+  "toUser": "bob",
+  "amount": 4000
+}
+
+
+Response:
+
+{ "message": "Insufficient balance" }
+
+5. Transfer to non-existent user
+POST /transfer
+Content-Type: application/json
+
+{
+  "fromUser": "alice",
+  "toUser": "charlie",
+  "amount": 500
+}
+
+
+Response:
+
+{ "message": "Receiver account 'charlie' not found" }
+
+
+✅ Key Points:
+
+Validates sender balance before updating.
+
+Sequentially updates sender and receiver to ensure logical correctness.
+
+Returns clear error messages for insufficient funds or non-existent accounts.
+
+Works without using MongoDB transactions.
