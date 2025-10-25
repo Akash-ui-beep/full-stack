@@ -1,0 +1,133 @@
+Step 1: Initialize Project
+mkdir rbac-jwt
+cd rbac-jwt
+npm init -y
+npm install express jsonwebtoken body-parser
+
+Step 2: Create server.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+app.use(bodyParser.json());
+
+const JWT_SECRET = 'supersecretkey';
+
+// Hardcoded users for simplicity
+const users = [
+    { id: 1, username: 'admin', password: 'admin123', role: 'Admin' },
+    { id: 2, username: 'moderator', password: 'mod123', role: 'Moderator' },
+    { id: 3, username: 'user', password: 'user123', role: 'User' }
+];
+
+// Login route
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+
+    const user = users.find(u => u.username === username && u.password === password);
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+    // Generate JWT including role
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+});
+
+// Middleware to verify JWT
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ message: 'Invalid token' });
+        req.user = user;
+        next();
+    });
+}
+
+// Middleware to authorize roles
+function authorizeRoles(...allowedRoles) {
+    return (req, res, next) => {
+        if (!req.user || !allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
+        }
+        next();
+    };
+}
+
+// Protected routes
+app.get('/admin-dashboard', authenticateToken, authorizeRoles('Admin'), (req, res) => {
+    res.json({ message: `Welcome Admin ${req.user.username}` });
+});
+
+app.get('/moderator-panel', authenticateToken, authorizeRoles('Admin', 'Moderator'), (req, res) => {
+    res.json({ message: `Welcome ${req.user.role} ${req.user.username}` });
+});
+
+app.get('/user-profile', authenticateToken, authorizeRoles('Admin', 'Moderator', 'User'), (req, res) => {
+    res.json({ message: `Hello ${req.user.username}, this is your profile.` });
+});
+
+// Start server
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+
+Step 3: Test the System
+
+Login
+
+POST http://localhost:3000/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+
+Response:
+
+{
+  "token": "<JWT_TOKEN>"
+}
+
+
+Access Admin Dashboard
+
+GET /admin-dashboard
+Authorization: Bearer <JWT_TOKEN>
+
+
+Only Admin token works.
+
+Others will get:
+
+{ "message": "Access denied. Insufficient permissions." }
+
+
+Access Moderator Panel
+
+Admin and Moderator tokens work.
+
+User token denied.
+
+Access User Profile
+
+All roles can access.
+
+Invalid token
+
+{ "message": "Invalid token" }
+
+
+✅ Features Implemented:
+
+JWT authentication with role included.
+
+authenticateToken middleware to verify token.
+
+authorizeRoles middleware to restrict access by role.
+
+Multiple protected routes with role-based access.
