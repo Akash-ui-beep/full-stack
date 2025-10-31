@@ -1,0 +1,28 @@
+Create a Dockerfile In the root of your project, add a file named Dockerfile with given contents
+
+
+
+# Use the official Apache Tomcat image with JDK 17
+FROM tomcat:10.1-jdk17-temurin
+
+# Set the working directory inside the container
+WORKDIR /usr/local/tomcat
+
+# Remove the default ROOT web application
+RUN rm -rf webapps/ROOT
+
+# Copy your WAR file (change name if needed)
+# Example: your WAR file = OnlineAuctionSystem.war
+COPY OnlineAuctionSystem.war webapps/ROOT.war
+
+# Optional: Add Oracle JDBC driver if your app connects to Oracle DB
+# (Ensure you have ojdbc8.jar in your project folder)
+COPY ojdbc8.jar lib/
+
+# Expose Tomcat port
+EXPOSE 8080
+
+# Start Tomcat server
+CMD ["catalina.sh", "run"]
+
+
