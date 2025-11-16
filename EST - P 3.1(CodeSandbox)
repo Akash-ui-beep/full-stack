@@ -1,0 +1,51 @@
+import React from 'react';
+
+// Define the types for props
+interface ProductCardProps {
+  productName: string;
+  price: string;
+  status: string;
+}
+
+// ProductCard Component
+const ProductCard: React.FC<ProductCardProps> = ({ productName, price, status }) => {
+  return (
+    <div style={cardStyle}>
+      <h2>{productName}</h2>
+      <p>Price: ${price}</p>
+      <p>Status: {status}</p>
+    </div>
+  );
+};
+
+// Main App Component
+const App: React.FC = () => {
+  return (
+    <div>
+      <h1>Products List</h1>
+      <div style={productListStyle}>
+        <ProductCard productName="Wireless Mouse" price="25.99" status="In Stock" />
+        <ProductCard productName="Keyboard" price="45.5" status="Out of Stock" />
+        <ProductCard productName="Monitor" price="199.99" status="In Stock" />
+      </div>
+    </div>
+  );
+};
+
+// Inline styles for basic layout
+const cardStyle = {
+  border: '1px solid black',
+  padding: '20px',
+  margin: '10px',
+  width: '200px',
+  textAlign: 'center',
+  borderRadius: '5px'
+};
+
+const productListStyle = {
+  display: 'flex',
+  justifyContent: 'space-around',
+  flexWrap: 'wrap'
+};
+
+export default App;
