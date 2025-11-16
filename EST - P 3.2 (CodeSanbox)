@@ -1,0 +1,83 @@
+import React, { useState } from 'react';
+
+const LibraryManagement = () => {
+  // Book list state
+  const [books, setBooks] = useState([
+    { title: "1984", author: "George Orwell" },
+    { title: "The Great Gatsby", author: "F. Scott Fitzgerald" },
+    { title: "To Kill a Mockingbird", author: "Harper Lee" },
+  ]);
+  
+  // Search input state
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // New book input states
+  const [newBookTitle, setNewBookTitle] = useState("");
+  const [newBookAuthor, setNewBookAuthor] = useState("");
+
+  // Function to remove a book
+  const removeBook = (title) => {
+    setBooks(books.filter(book => book.title !== title));
+  };
+
+  // Function to add a new book
+  const addBook = () => {
+    if (newBookTitle && newBookAuthor) {
+      setBooks([
+        ...books,
+        { title: newBookTitle, author: newBookAuthor }
+      ]);
+      setNewBookTitle("");
+      setNewBookAuthor("");
+    }
+  };
+
+  // Filter books based on search query
+  const filteredBooks = books.filter(book =>
+    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.author.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div>
+      <h1>Library Management</h1>
+      
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search by title or author"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      
+      {/* Add Book */}
+      <div>
+        <input
+          type="text"
+          placeholder="New book title"
+          value={newBookTitle}
+          onChange={(e) => setNewBookTitle(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="New book author"
+          value={newBookAuthor}
+          onChange={(e) => setNewBookAuthor(e.target.value)}
+        />
+        <button onClick={addBook}>Add Book</button>
+      </div>
+      
+      {/* Book List */}
+      <div>
+        {filteredBooks.map((book, index) => (
+          <div key={index}>
+            <span>{book.title} by {book.author}</span>
+            <button onClick={() => removeBook(book.title)}>Remove</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default LibraryManagement;
