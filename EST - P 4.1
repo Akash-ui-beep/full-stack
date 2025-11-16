@@ -1,0 +1,138 @@
+✅ ✔ YES — You Can Use “Node HTTP Server” Template in CodeSandbox
+
+CodeSandbox allows outbound HTTP/HTTPS connections, so connecting to MongoDB Atlas works perfectly.
+
+You just need:
+
+⭐ Step 1 — Create Sandbox
+
+Go to https://codesandbox.io/
+
+Click Create Sandbox
+
+Select Node.js → “Node HTTP Server” template
+
+⭐ Step 2 — Install Mongoose in CodeSandbox Terminal
+
+Open the built-in terminal:
+
+npm install mongoose
+
+
+You already did this (good!).
+
+⭐ Step 3 — Create a File db.js
+
+Inside your workspace, create:
+
+db.js
+const mongoose = require("mongoose");
+
+async function connectDB() {
+  try {
+    await mongoose.connect(
+      "mongodb+srv://cloudcu641_db_user:3XR5HumzZ9JRb8dY@cluster0.1p0kcdj.mongodb.net/mydb"
+    );
+    console.log("MongoDB Connected!");
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+module.exports = connectDB;
+
+
+✔ IMPORTANT: Notice we added /mydb at the end
+If you don’t add that, Mongoose gives errors.
+
+⭐ Step 4 — Create Model Product.js
+Product.js
+const mongoose = require("mongoose");
+
+const productSchema = new mongoose.Schema({
+  name: String,
+  price: Number,
+  category: String
+});
+
+module.exports = mongoose.model("Product", productSchema);
+
+⭐ Step 5 — Update server.js (or index.js)
+
+Replace the HTTP server with CRUD operations:
+
+server.js
+const http = require("http");
+const connectDB = require("./db");
+const Product = require("./Product");
+
+connectDB(); // connect to Atlas
+
+const server = http.createServer(async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+
+  if (req.url === "/add" && req.method === "GET") {
+    const p = new Product({
+      name: "Laptop",
+      price: 60000,
+      category: "Electronics"
+    });
+    await p.save();
+    res.end(JSON.stringify({ message: "Product Added", product: p }));
+  }
+
+  else if (req.url === "/read" && req.method === "GET") {
+    const data = await Product.find();
+    res.end(JSON.stringify(data));
+  }
+
+  else if (req.url === "/update" && req.method === "GET") {
+    const updated = await Product.findOneAndUpdate(
+      { name: "Laptop" },
+      { price: 65000 },
+      { new: true }
+    );
+    res.end(JSON.stringify({ message: "Updated", updated }));
+  }
+
+  else if (req.url === "/delete" && req.method === "GET") {
+    const deleted = await Product.findOneAndDelete({ name: "Laptop" });
+    res.end(JSON.stringify({ message: "Deleted", deleted }));
+  }
+
+  else {
+    res.end(JSON.stringify({ message: "Node + Mongoose Server Running" }));
+  }
+});
+
+server.listen(3000, () => console.log("Server running on 3000"));
+
+⭐ Step 6 — Run the Server
+
+In CodeSandbox terminal:
+
+node server.js
+
+
+You will see:
+
+MongoDB Connected!
+Server running on 3000
+
+⭐ Step 7 — Test CRUD in Browser (Right Panel)
+
+Open URLs:
+
+Add product
+/add
+
+Read all
+/read
+
+Update
+/update
+
+Delete
+/delete
+
+🎉 DONE — FULL CRUD WORKS ONLINE IN CODESANDBOX
